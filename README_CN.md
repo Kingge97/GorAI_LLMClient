@@ -4,15 +4,17 @@
 
 ## 版本
 
-**当前版本：0.3.0**
+**当前版本：0.3.2**
 
 ## 功能特性
 
-- 🔌 **多 LLM 提供商**：支持 OpenAI 和 Anthropic API
+- 🔌 **多 LLM 提供商**：支持 OpenAI、Anthropic、DeepSeek 和 Minimax API
 - 🔧 **工具调用**：内置函数/工具调用支持，可自动执行
 - 🌊 **流式响应**：实时流式传输，提供更好的用户体验
 - 🔄 **对话循环**：使用 `chatToNextLoop` 实现自动多轮对话
 - 💭 **思考支持**：处理模型推理/思考内容（Anthropic 扩展思考）
+- 🧠 **交错思维交互路由**：支持 DeepSeek OpenAI 兼容和 Minimax Anthropic 兼容的交错思维交互
+- 🖼️ **图片支持**：内置图片格式处理支持
 - 🎯 **统一接口**：不同提供商之间的一致 API
 - 🛠️ **灵活的工具执行**：通过 `ToolExecutor` 接口自定义工具执行器
 
@@ -26,10 +28,12 @@
 ```
 GorAI_LLMClient/
 ├── models/
-│   ├── __init__.py           # create_model 工厂函数
-│   ├── _model_base.py        # 模型基类
-│   ├── _openai_model.py      # OpenAI 实现
-│   └── _anthropic_model.py   # Anthropic 实现
+│   ├── __init__.py                    # create_model 工厂函数
+│   ├── _model_base.py                 # 模型基类
+│   ├── _openai_model.py               # OpenAI 实现
+│   ├── _anthropic_model.py            # Anthropic 实现
+│   ├── _deepseek_openai_model.py      # DeepSeek OpenAI 兼容实现
+│   └── _minimax_anthropic_model.py    # Minimax Anthropic 兼容实现
 ├── message/
 │   ├── __init__.py
 │   └── _message_base.py      # MsgReturn 消息格式
