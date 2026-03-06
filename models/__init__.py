@@ -1,15 +1,17 @@
 from ._model_base import model_base
 from ._openai_model import openai_chat_completetion_model
 from ._anthropic_model import anthropic_model
-from ._minimax_anthropic_model import minimax_anthropic_model
-from ._deepseek_openai_model import deepseek_openai_model
+from ._openai_response_model import openai_response_model
+from ._openai_chat_interleaved_model import openai_chat_interleaved_model
+from ._anthropic_interleaved_model import anthropic_interleaved_model
 
 __all__ = [
     "model_base",
     "openai_chat_completetion_model",
     "anthropic_model",
-    "minimax_anthropic_model",
-    "deepseek_openai_model",
+    "openai_response_model",
+    "openai_chat_interleaved_model",
+    "anthropic_interleaved_model",
     "create_model"
 ]
 
@@ -46,8 +48,8 @@ def create_model(base_url, api_key, model_name, stream=True, extra_args=None, ro
             extra_args=extra_args,
             router=router
         )
-    elif router == "minimax-anthropic":
-        return minimax_anthropic_model(
+    elif router == "openai-chat-interleaved":
+        return openai_chat_interleaved_model(
             base_url=base_url,
             api_key=api_key,
             model_name=model_name,
@@ -55,8 +57,8 @@ def create_model(base_url, api_key, model_name, stream=True, extra_args=None, ro
             extra_args=extra_args,
             router=router
         )
-    elif router == "deepseek-openai":
-        return deepseek_openai_model(
+    elif router == "anthropic-interleaved":
+        return anthropic_interleaved_model(
             base_url=base_url,
             api_key=api_key,
             model_name=model_name,
@@ -64,5 +66,15 @@ def create_model(base_url, api_key, model_name, stream=True, extra_args=None, ro
             extra_args=extra_args,
             router=router
         )
+    elif router == "openai-response":
+        return openai_response_model(
+            base_url=base_url,
+            api_key=api_key,
+            model_name=model_name,
+            stream=stream,
+            extra_args=extra_args,
+            router=router
+        )
+
     else:
         raise ValueError(f"Unsupported router type: {router}")

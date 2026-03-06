@@ -1,5 +1,5 @@
 import json
-from openai import OpenAI
+from openai import OpenAI, APIConnectionError, APITimeoutError
 from ._model_base import model_base
 from ..message._message_base import MsgReturn
 
@@ -39,6 +39,15 @@ class openai_chat_completetion_model(model_base):
             else:
                 yield from self._handle_normal_response(request_params)
 
+        except (APIConnectionError, APITimeoutError, ConnectionError) as e:
+            # 连接断开错误，可以被恢复
+            yield MsgReturn(
+                content=f"Connection error: {str(e)}",
+                type="error",
+                gorType="connection_error",
+                extra={"error": str(e), "retryable": True},
+                default_response=None
+            )
         except Exception as e:
             # 返回错误信息
             yield MsgReturn(
@@ -115,7 +124,7 @@ class openai_chat_completetion_model(model_base):
         # 将字典转换为按index排序的列表，只保留有id的工具
         tool_calls = [tool_calls_dict[i] for i in sorted(tool_calls_dict.keys()) if tool_calls_dict[i]['id']]
 
-        print(tool_calls)
+        # print(tool_calls)
         # 如果有工具调用，返回工具信息
         if tool_calls:
             for tool_call in tool_calls:

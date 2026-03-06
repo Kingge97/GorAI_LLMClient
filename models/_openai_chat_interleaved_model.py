@@ -1,12 +1,12 @@
 import json
 from ._openai_model import openai_chat_completetion_model
 
-class deepseek_openai_model(openai_chat_completetion_model):
+class openai_chat_interleaved_model(openai_chat_completetion_model):
     """
-    DeepSeek OpenAI 模型实现
+    OpenAI Chat 交错式思考模型实现
     
     继承自 openai_chat_completetion_model，重写 chatToNextLoop 方法
-    以支持 DeepSeek 特有的 reasoning_content 处理方式
+    以支持带有 reasoning_content 的交错式思考处理方式
     """
     
     def __init__(self, base_url, api_key, model_name, stream=True, extra_args=None, router=None):
@@ -14,7 +14,7 @@ class deepseek_openai_model(openai_chat_completetion_model):
     
     def chatToNextLoop(self, messages, executor, encode_json=None, interrupt_check=None):
         """
-        DeepSeek 专用对话循环方法
+        交错式思考专用对话循环方法
         
         与标准实现的关键差异：
         1. 在多轮对话中，只将 content 追加到 messages，不追加 reasoning_content
@@ -59,7 +59,7 @@ class deepseek_openai_model(openai_chat_completetion_model):
                 is_answering = False
                 
                 # 发送思考过程开始标记
-                print("=" * 20 + "思考过程" + "=" * 20)
+                # print("=" * 20 + "思考过程" + "=" * 20)
                 
                 # 调用 model_chat
                 response = self.model_chat(messages)
@@ -68,31 +68,42 @@ class deepseek_openai_model(openai_chat_completetion_model):
                 for item in response:
                     # 检查中断标志
                     if interrupt_check():
-                        print(f"\n检测到中断请求，停止对话")
+                        # print(f"\n检测到中断请求，停止对话")
                         yield b"data: " + encode_json({'type': 'interrupted', 'message': '对话已被用户中断'}) + b"\n\n"
                         return
                     
                     # 处理错误信息
                     if item.gorType == "error":
                         error_msg = item.content
-                        print(f"\n模型调用错误: {error_msg}")
+                        # print(f"\n模型调用错误: {error_msg}")
                         yield b"data: " + encode_json({'type': 'error', 'message': error_msg}) + b"\n\n"
+                        return
+
+                    # 处理连接断开错误
+                    elif item.gorType == "connection_error":
+                        error_msg = item.content
+                        # print(f"\n连接断开: {error_msg}")
+                        yield b"data: " + encode_json({
+                            'type': 'connection_error',
+                            'message': error_msg,
+                            'can_resume': True
+                        }) + b"\n\n"
                         return
                     
                     # 处理思考内容 (reasoning_content)
                     elif item.gorType == "think":
                         reasoning_content += item.content
-                        print(item.content, end="", flush=True)
+                        # print(item.content, end="", flush=True)
                         yield b"data: " + encode_json({'type': 'thinking', 'content': item.content}) + b"\n\n"
                     
                     # 处理回答内容
                     elif item.gorType == "answer":
                         if not is_answering:
                             is_answering = True
-                            print("\n" + "=" * 20 + "回复内容" + "=" * 20)
+                            # print("\n" + "=" * 20 + "回复内容" + "=" * 20)
                         
                         answer_content += item.content
-                        print(item.content, end="", flush=True)
+                        # print(item.content, end="", flush=True)
                         yield b"data: " + encode_json({'type': 'answer', 'content': item.content}) + b"\n\n"
                     
                     # 处理工具调用
@@ -103,22 +114,23 @@ class deepseek_openai_model(openai_chat_completetion_model):
                             'name': tool_call['function']['name'],
                             'arguments': tool_call['function']['arguments']
                         })
-                        print(f"\n检测到工具调用: {tool_call['function']['name']}")
+                        # print(f"\n检测到工具调用: {tool_call['function']['name']}")
                     
                     # 处理结束标志
                     elif item.gorType == "end":
-                        print("\n" + "=" * 30 + "本次结束" + "=" * 30)
+                        # print("\n" + "=" * 30 + "本次结束" + "=" * 30)
+                        pass
                 
                 # 如果有工具调用，执行工具并继续循环
                 if tool_info:
                     # 检查中断标志
                     if interrupt_check():
-                        print(f"\n检测到中断请求，停止工具执行")
+                        # print(f"\n检测到中断请求，停止工具执行")
                         yield b"data: " + encode_json({'type': 'interrupted', 'message': '对话已被用户中断'}) + b"\n\n"
                         return
                     
-                    # 执行工具调用（使用 DeepSeek 专用的方法）
-                    yield from self._execute_tools_in_loop_deepseek(
+                    # 执行工具调用（使用交错式思考专用的方法）
+                    yield from self._execute_tools_in_loop_interleaved(
                         tool_info, messages, answer_content, reasoning_content, executor, encode_json, interrupt_check
                     )
                 else:
@@ -131,18 +143,18 @@ class deepseek_openai_model(openai_chat_completetion_model):
         
         except Exception as e:
             error_msg = f"响应错误: {str(e)}"
-            print(f"响应错误: {e}")
+            # print(f"响应错误: {e}")
             import traceback
-            print(traceback.format_exc())
+            # print(traceback.format_exc())
             yield b"data: " + encode_json({'type': 'error', 'message': error_msg}) + b"\n\n"
     
-    def _execute_tools_in_loop_deepseek(self, tool_info, messages, answer_content, reasoning_content, executor, encode_json, interrupt_check):
+    def _execute_tools_in_loop_interleaved(self, tool_info, messages, answer_content, reasoning_content, executor, encode_json, interrupt_check):
         """
-        DeepSeek 专用的工具执行方法
+        交错式思考专用的工具执行方法
         
         与标准实现的关键差异：
         1. assistant 消息中必须包含 reasoning_content 字段（工具调用时必须）
-        2. 消息格式符合 DeepSeek 的多轮对话要求
+        2. 消息格式符合交错式思考的多轮对话要求
         
         Args:
             tool_info: 工具调用信息列表
@@ -156,11 +168,10 @@ class deepseek_openai_model(openai_chat_completetion_model):
         Yields:
             bytes: SSE 格式的事件数据
         """
-        print("\n开始工具调用")
+        # print("\n开始工具调用")
         
         # 构建助手消息：必须包含 content、reasoning_content 和 tool_calls
-        # ⚠️ 关键：DeepSeek API 要求带有工具调用的 assistant 消息必须包含 reasoning_content
-        # 参考：https://api-docs.deepseek.com/guides/thinking_mode#tool-calls
+        # ⚠️ 关键：交错式思考 API 要求带有工具调用的 assistant 消息必须包含 reasoning_content
         assistant_message = {
             "role": "assistant",
             "content": answer_content if answer_content else "",
@@ -196,11 +207,11 @@ class deepseek_openai_model(openai_chat_completetion_model):
         yield b"data: " + encode_json({'type': 'tool_calls', 'tool_calls': tool_calls_for_frontend}) + b"\n\n"
         
         # 执行工具调用
-        print("工具数量：" + str(len(tool_info)))
+        # print("工具数量：" + str(len(tool_info)))
         for tool in tool_info:
             # 检查中断标志
             if interrupt_check():
-                print(f"\n检测到中断请求，停止工具执行")
+                # print(f"\n检测到中断请求，停止工具执行")
                 yield b"data: " + encode_json({'type': 'interrupted', 'message': '对话已被用户中断'}) + b"\n\n"
                 return
             
@@ -211,7 +222,7 @@ class deepseek_openai_model(openai_chat_completetion_model):
                 if tool_args is None:
                     # JSON解析失败，返回错误
                     error_msg = f"工具参数不是有效的JSON: {tool['arguments']}"
-                    print(f"工具参数校验失败: {error_msg}")
+                    # print(f"工具参数校验失败: {error_msg}")
                     yield b"data: " + encode_json({
                         'type': 'tool_result',
                         'tool_name': tool.get('name', 'unknown'),
@@ -225,7 +236,7 @@ class deepseek_openai_model(openai_chat_completetion_model):
                 tool_name = tool["name"]
                 tool_call_id = tool["id"]
                 
-                print(f"执行工具: {tool_name}, 参数: {tool_args}")
+                # print(f"执行工具: {tool_name}, 参数: {tool_args}")
                 
                 # 发送工具执行通知
                 yield b"data: " + encode_json({
@@ -238,7 +249,7 @@ class deepseek_openai_model(openai_chat_completetion_model):
                 # 执行工具
                 result = executor.execute_tool(tool_name, tool_args)
                 
-                print(f"工具执行结果: {result}")
+                # print(f"工具执行结果: {result}")
                 
                 # 发送工具结果
                 yield b"data: " + encode_json({
@@ -257,7 +268,7 @@ class deepseek_openai_model(openai_chat_completetion_model):
             
             except Exception as e:
                 error_msg = f"工具执行错误: {str(e)}"
-                print(f"工具执行错误: {e}")
+                # print(f"工具执行错误: {e}")
                 yield b"data: " + encode_json({
                     'type': 'tool_result',
                     'tool_name': tool_name,

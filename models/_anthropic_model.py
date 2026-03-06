@@ -1,5 +1,5 @@
 import json
-from anthropic import Anthropic
+from anthropic import Anthropic, APIConnectionError, APITimeoutError
 from ._model_base import model_base
 from ..message._message_base import MsgReturn
 
@@ -45,6 +45,15 @@ class anthropic_model(model_base):
             else:
                 yield from self._handle_normal_response(request_params)
 
+        except (APIConnectionError, APITimeoutError, ConnectionError) as e:
+            # 连接断开错误，可以被恢复
+            yield MsgReturn(
+                content=f"Connection error: {str(e)}",
+                type="error",
+                gorType="connection_error",
+                extra={"error": str(e), "retryable": True},
+                default_response=None
+            )
         except Exception as e:
             # 返回错误信息
             yield MsgReturn(
@@ -135,7 +144,7 @@ class anthropic_model(model_base):
         current_content_type = None  # 当前内容块类型："thinking" 或 "text"
 
         for chunk in response:
-            print(chunk)
+            # print(chunk)
             if chunk.type == "message_start":
                 # 消息开始
                 pass

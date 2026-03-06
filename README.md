@@ -13,7 +13,7 @@ A unified LLM client library supporting multiple providers (OpenAI, Anthropic, e
 - 🌊 **Streaming Responses**: Real-time streaming for better user experience
 - 🔄 **Conversation Loops**: Automatic multi-turn conversations with `chatToNextLoop`
 - 💭 **Thinking Support**: Handle model reasoning/thinking content (Anthropic extended thinking)
-- 🧠 **Interleaved Thinking Router**: Support for DeepSeek OpenAI-compatible and Minimax Anthropic-compatible interleaved thinking interactions
+- 🧠 **Interleaved Thinking Router**: Support for OpenAI-compatible and Anthropic-compatible interleaved thinking interactions
 - 🖼️ **Image Support**: Built-in support for image format handling
 - 🎯 **Unified Interface**: Consistent API across different providers
 - 🛠️ **Flexible Tool Execution**: Custom tool executors with `ToolExecutor` interface
@@ -32,8 +32,8 @@ GorAI_LLMClient/
 │   ├── _model_base.py                 # Base model class
 │   ├── _openai_model.py               # OpenAI implementation
 │   ├── _anthropic_model.py            # Anthropic implementation
-│   ├── _deepseek_openai_model.py      # DeepSeek OpenAI-compatible implementation
-│   └── _minimax_anthropic_model.py    # Minimax Anthropic-compatible implementation
+│   ├── _openai_chat_interleaved_model.py  # OpenAI-compatible interleaved thinking implementation
+│   └── _anthropic_interleaved_model.py    # Anthropic-compatible interleaved thinking implementation
 ├── message/
 │   ├── __init__.py
 │   └── _message_base.py      # MsgReturn message format

@@ -13,7 +13,7 @@
 - 🌊 **流式响应**：实时流式传输，提供更好的用户体验
 - 🔄 **对话循环**：使用 `chatToNextLoop` 实现自动多轮对话
 - 💭 **思考支持**：处理模型推理/思考内容（Anthropic 扩展思考）
-- 🧠 **交错思维交互路由**：支持 DeepSeek OpenAI 兼容和 Minimax Anthropic 兼容的交错思维交互
+- 🧠 **交错思维交互路由**：支持 OpenAI 兼容和 Anthropic 兼容的交错思维交互
 - 🖼️ **图片支持**：内置图片格式处理支持
 - 🎯 **统一接口**：不同提供商之间的一致 API
 - 🛠️ **灵活的工具执行**：通过 `ToolExecutor` 接口自定义工具执行器
@@ -32,8 +32,8 @@ GorAI_LLMClient/
 │   ├── _model_base.py                 # 模型基类
 │   ├── _openai_model.py               # OpenAI 实现
 │   ├── _anthropic_model.py            # Anthropic 实现
-│   ├── _deepseek_openai_model.py      # DeepSeek OpenAI 兼容实现
-│   └── _minimax_anthropic_model.py    # Minimax Anthropic 兼容实现
+│   ├── _openai_chat_interleaved_model.py  # OpenAI 兼容交错思维实现
+│   └── _anthropic_interleaved_model.py    # Anthropic 兼容交错思维实现
 ├── message/
 │   ├── __init__.py
 │   └── _message_base.py      # MsgReturn 消息格式

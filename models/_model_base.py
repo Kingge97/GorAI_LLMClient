@@ -111,8 +111,8 @@ class model_base(ABC):
                 return json.loads(fixed_args)
             except json.JSONDecodeError as e:
                 # 如果仍然失败，返回None表示解析失败
-                print(f"工具参数JSON解析失败: {e}")
-                print(f"原始参数: {arguments_str}")
+                # print(f"工具参数JSON解析失败: {e}")
+                # print(f"原始参数: {arguments_str}")
                 return None
 
     def _is_vision_content(self, result):
@@ -238,7 +238,7 @@ class model_base(ABC):
                 is_answering = False
 
                 # 发送思考过程开始标记
-                print("=" * 20 + "思考过程" + "=" * 20)
+                # print("=" * 20 + "思考过程" + "=" * 20)
 
                 # 调用 model_chat
                 response = self.model_chat(messages)
@@ -247,32 +247,44 @@ class model_base(ABC):
                 for item in response:
                     # 检查中断标志
                     if interrupt_check():
-                        print(f"\n检测到中断请求，停止对话")
+                        # print(f"\n检测到中断请求，停止对话")
                         yield b"data: " + encode_json({'type': 'interrupted', 'message': '对话已被用户中断'}) + b"\n\n"
                         return
 
                     # 处理错误信息
                     if item.gorType == "error":
                         error_msg = item.content
-                        print(f"\n模型调用错误: {error_msg}")
+                        # print(f"\n模型调用错误: {error_msg}")
                         yield b"data: " + encode_json({'type': 'error', 'message': error_msg}) + b"\n\n"
                         # 错误时退出循环
+                        return
+
+                    # 处理连接断开错误
+                    elif item.gorType == "connection_error":
+                        error_msg = item.content
+                        # print(f"\n连接断开: {error_msg}")
+                        yield b"data: " + encode_json({
+                            'type': 'connection_error',
+                            'message': error_msg,
+                            'can_resume': True
+                        }) + b"\n\n"
+                        # 连接断开时退出循环，但保留 messages 供恢复使用
                         return
 
                     # 处理思考内容
                     elif item.gorType == "think":
                         reasoning_content += item.content
-                        print(item.content, end="", flush=True)
+                        # print(item.content, end="", flush=True)
                         yield b"data: " + encode_json({'type': 'thinking', 'content': item.content}) + b"\n\n"
 
                     # 处理回答内容
                     elif item.gorType == "answer":
                         if not is_answering:
                             is_answering = True
-                            print("\n" + "=" * 20 + "回复内容" + "=" * 20)
-
+                            # print("\n" + "=" * 20 + "回复内容" + "=" * 20)
+                                            
                         answer_content += item.content
-                        print(item.content, end="", flush=True)
+                        # print(item.content, end="", flush=True)
                         yield b"data: " + encode_json({'type': 'answer', 'content': item.content}) + b"\n\n"
 
                     # 处理工具调用
@@ -283,17 +295,18 @@ class model_base(ABC):
                             'name': tool_call['function']['name'],
                             'arguments': tool_call['function']['arguments']
                         })
-                        print(f"\n检测到工具调用: {tool_call['function']['name']}")
+                        # print(f"\n检测到工具调用: {tool_call['function']['name']}")
 
                     # 处理结束标志
                     elif item.gorType == "end":
-                        print("\n" + "=" * 30 + "本次结束" + "=" * 30)
+                        # print("\n" + "=" * 30 + "本次结束" + "=" * 30)
+                        pass
 
                 # 如果有工具调用，执行工具并继续循环
                 if tool_info:
                     # 检查中断标志
                     if interrupt_check():
-                        print(f"\n检测到中断请求，停止工具执行")
+                        # print(f"\n检测到中断请求，停止工具执行")
                         yield b"data: " + encode_json({'type': 'interrupted', 'message': '对话已被用户中断'}) + b"\n\n"
                         return
 
@@ -315,9 +328,9 @@ class model_base(ABC):
 
         except Exception as e:
             error_msg = f"响应错误: {str(e)}"
-            print(f"响应错误: {e}")
+            # print(f"响应错误: {e}")
             import traceback
-            print(traceback.format_exc())
+            # print(traceback.format_exc())
             yield b"data: " + encode_json({'type': 'error', 'message': error_msg}) + b"\n\n"
 
     def _execute_tools_in_loop(self, tool_info, messages, executor, encode_json, interrupt_check):
@@ -334,7 +347,7 @@ class model_base(ABC):
         Yields:
             bytes: SSE 格式的事件数据
         """
-        print("\n开始工具调用")
+        # print("\n开始工具调用")
 
         # 构建助手消息
         assistant_message = {"role": "assistant", "content": "", "tool_calls": []}
@@ -355,11 +368,11 @@ class model_base(ABC):
         yield b"data: " + encode_json({'type': 'tool_calls', 'tool_calls': tool_calls_for_frontend}) + b"\n\n"
 
         # 执行工具调用
-        print("工具数量：" + str(len(tool_info)))
+        # print("工具数量：" + str(len(tool_info)))
         for tool in tool_info:
             # 检查中断标志
             if interrupt_check():
-                print(f"\n检测到中断请求，停止工具执行")
+                # print(f"\n检测到中断请求，停止工具执行")
                 yield b"data: " + encode_json({'type': 'interrupted', 'message': '对话已被用户中断'}) + b"\n\n"
                 return
 
@@ -370,7 +383,7 @@ class model_base(ABC):
                 if tool_args is None:
                     # JSON解析失败，返回错误
                     error_msg = f"工具参数不是有效的JSON: {tool['arguments']}"
-                    print(f"工具参数校验失败: {error_msg}")
+                    # print(f"工具参数校验失败: {error_msg}")
                     yield b"data: " + encode_json({
                         'type': 'tool_result',
                         'tool_name': tool.get('name', 'unknown'),
@@ -383,16 +396,16 @@ class model_base(ABC):
 
                 tool_name = tool["name"]
                 tool_call_id = tool["id"]
-
-                print(f"执行工具: {tool_name}, 参数: {tool_args}")
+                                
+                # print(f"执行工具: {tool_name}, 参数: {tool_args}")
 
                 # 发送工具执行通知
                 yield b"data: " + encode_json({'type': 'tool_execution', 'tool_name': tool_name, 'tool_call_id': tool_call_id, 'args': tool_args}) + b"\n\n"
 
                 # 执行工具
                 result = executor.execute_tool(tool_name, tool_args)
-
-                print(f"工具执行结果: {result}")
+                                
+                # print(f"工具执行结果: {result}")
 
                 # 判断结果类型并构建消息
                 if self._is_vision_content(result):
@@ -400,7 +413,7 @@ class model_base(ABC):
                     # 注意：OpenAI API的tool消息content字段只接受字符串
                     # 但我们可以将结构化数据序列化后传递，模型能理解JSON格式的视觉内容
                     tool_result_content = result
-                    print(f"检测到视觉内容，使用dict格式")
+                    # print(f"检测到视觉内容，使用dict格式")
                 else:
                     # 普通文本结果，使用字符串格式
                     tool_result_content = str(result)
@@ -419,7 +432,7 @@ class model_base(ABC):
 
             except Exception as e:
                 error_msg = f"工具执行错误: {str(e)}"
-                print(f"工具执行错误: {e}")
+                # print(f"工具执行错误: {e}")
                 yield b"data: " + encode_json({'type': 'tool_result', 'tool_name': tool_name, 'tool_call_id': tool_call_id, 'result': error_msg}) + b"\n\n"
                 messages.append({"role": "tool", "tool_call_id": tool_call_id, "content": error_msg})
 
